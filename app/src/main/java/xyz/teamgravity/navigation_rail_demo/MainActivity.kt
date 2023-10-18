@@ -77,8 +77,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             NavigationraildemoTheme {
-                val windows = calculateWindowSizeClass(activity = this)
-                val compact = windows.widthSizeClass == WindowWidthSizeClass.Compact
+                val window = calculateWindowSizeClass(activity = this)
+                val compact = window.widthSizeClass == WindowWidthSizeClass.Compact
                 var selectedNavigationIndex by rememberSaveable { mutableIntStateOf(0) }
 
                 Surface(

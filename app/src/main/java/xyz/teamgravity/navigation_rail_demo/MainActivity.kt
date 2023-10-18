@@ -3,6 +3,7 @@ package xyz.teamgravity.navigation_rail_demo
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,6 +28,8 @@ import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
@@ -48,22 +51,22 @@ import xyz.teamgravity.navigation_rail_demo.ui.theme.NavigationraildemoTheme
 
 class MainActivity : ComponentActivity() {
 
-    private val rails: List<NavigationRailModel> = listOf(
-        NavigationRailModel(
-            title = getString(R.string.home),
+    private val navigations: List<NavigationModel> = listOf(
+        NavigationModel(
+            title = R.string.home,
             selectedIcon = Icons.Filled.Home,
             unselectedIcon = Icons.Outlined.Home,
             hasNews = false
         ),
-        NavigationRailModel(
-            title = getString(R.string.chat),
+        NavigationModel(
+            title = R.string.chat,
             selectedIcon = Icons.Filled.Email,
             unselectedIcon = Icons.Outlined.Email,
             hasNews = false,
             badgeCount = 77
         ),
-        NavigationRailModel(
-            title = getString(R.string.settings),
+        NavigationModel(
+            title = R.string.settings,
             selectedIcon = Icons.Filled.Settings,
             unselectedIcon = Icons.Outlined.Settings,
             hasNews = true
@@ -75,8 +78,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             NavigationraildemoTheme {
                 val windows = calculateWindowSizeClass(activity = this)
-                val showNavigationRail = windows.widthSizeClass != WindowWidthSizeClass.Compact
-                var selectedRailIndex by rememberSaveable { mutableIntStateOf(0) }
+                val compact = windows.widthSizeClass == WindowWidthSizeClass.Compact
+                var selectedNavigationIndex by rememberSaveable { mutableIntStateOf(0) }
 
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -84,8 +87,14 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Scaffold(
                         bottomBar = {
-                            if (!showNavigationRail) {
-                                // NavigationBar()
+                            if (compact) {
+                                NavigationBottomBar(
+                                    navigations = navigations,
+                                    selectedNavigationIndex = selectedNavigationIndex,
+                                    onSelect = { index ->
+                                        selectedNavigationIndex = index
+                                    }
+                                )
                             }
                         },
                         modifier = Modifier.fillMaxSize()
@@ -95,7 +104,7 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxSize()
                                 .padding(padding)
                                 .padding(
-                                    start = if (showNavigationRail) 80.dp else 0.dp
+                                    start = if (compact) 0.dp else 80.dp
                                 )
                         ) {
                             items(100) { index ->
@@ -107,12 +116,12 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-                if (showNavigationRail) {
+                if (!compact) {
                     NavigationSideBar(
-                        rails = rails,
-                        selectedRailIndex = selectedRailIndex,
+                        navigations = navigations,
+                        selectedNavigationIndex = selectedNavigationIndex,
                         onSelect = { index ->
-                            selectedRailIndex = index
+                            selectedNavigationIndex = index
                         }
                     )
                 }
@@ -121,8 +130,8 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-data class NavigationRailModel(
-    val title: String,
+data class NavigationModel(
+    @StringRes val title: Int,
     val selectedIcon: ImageVector,
     val unselectedIcon: ImageVector,
     val hasNews: Boolean,
@@ -130,9 +139,37 @@ data class NavigationRailModel(
 )
 
 @Composable
+fun NavigationBottomBar(
+    navigations: List<NavigationModel>,
+    selectedNavigationIndex: Int,
+    onSelect: (Int) -> Unit
+) {
+    NavigationBar {
+        navigations.forEachIndexed { index, navigation ->
+            val selected = selectedNavigationIndex == index
+            NavigationBarItem(
+                selected = selected,
+                onClick = {
+                    onSelect(index)
+                },
+                icon = {
+                    NavigationIcon(
+                        navigation = navigation,
+                        selected = selected
+                    )
+                },
+                label = {
+                    Text(text = stringResource(id = navigation.title))
+                }
+            )
+        }
+    }
+}
+
+@Composable
 fun NavigationSideBar(
-    rails: List<NavigationRailModel>,
-    selectedRailIndex: Int,
+    navigations: List<NavigationModel>,
+    selectedNavigationIndex: Int,
     onSelect: (Int) -> Unit
 ) {
     NavigationRail(
@@ -166,8 +203,8 @@ fun NavigationSideBar(
             ),
             modifier = Modifier.fillMaxHeight()
         ) {
-            rails.forEachIndexed { index, rail ->
-                val selected = selectedRailIndex == index
+            navigations.forEachIndexed { index, navigation ->
+                val selected = selectedNavigationIndex == index
                 NavigationRailItem(
                     selected = selected,
                     onClick = {
@@ -175,12 +212,12 @@ fun NavigationSideBar(
                     },
                     icon = {
                         NavigationIcon(
-                            rail = rail,
+                            navigation = navigation,
                             selected = selected
                         )
                     },
                     label = {
-                        Text(text = rail.title)
+                        Text(text = stringResource(id = navigation.title))
                     }
                 )
             }
@@ -190,27 +227,27 @@ fun NavigationSideBar(
 
 @Composable
 fun NavigationIcon(
-    rail: NavigationRailModel,
+    navigation: NavigationModel,
     selected: Boolean
 ) {
     BadgedBox(
         badge = {
             when {
-                rail.badgeCount != null -> {
+                navigation.badgeCount != null -> {
                     Badge {
-                        Text(text = rail.badgeCount.toString())
+                        Text(text = navigation.badgeCount.toString())
                     }
                 }
 
-                rail.hasNews -> {
+                navigation.hasNews -> {
                     Badge()
                 }
             }
         }
     ) {
         Icon(
-            imageVector = if (selected) rail.selectedIcon else rail.unselectedIcon,
-            contentDescription = rail.title
+            imageVector = if (selected) navigation.selectedIcon else navigation.unselectedIcon,
+            contentDescription = stringResource(id = navigation.title)
         )
     }
 }
